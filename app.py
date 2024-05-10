@@ -1,6 +1,19 @@
 from video_processing import *
+
+from telegram import Bot
+from dotenv import load_dotenv
 import streamlit as st
 
+load_dotenv()
+
+# Telegram bot 設定
+bot_token = os.getenv('bot_token')
+chat_id = os.getenv('chat_id')
+bot = Bot(token=bot_token)
+
+def send_telegram_message(message):
+    """發送消息到 Telegram"""
+    bot.send_message(chat_id=chat_id, text=message)
 
 def save_and_display_content(content, role="user"):
     """ 儲存和顯示streamlit對話紀錄 """
@@ -10,7 +23,7 @@ def save_and_display_content(content, role="user"):
 
  # 頁面設置
 st.set_page_config(
-    page_title='CCTV語音轉文字',
+    page_title='語音轉文字',
     page_icon='📨',
     layout='wide',
     initial_sidebar_state='auto'
@@ -57,4 +70,5 @@ if submit_button:
     save_and_display_content(video_info)
     save_and_display_content(zh_text, "assistant")
     save_and_display_content(price, "assistant")
+    send_telegram_message(f"{video_info}\n{'===' * 2}\n{zh_text}\n{'===' * 2}\n{price}")
     # https://tv.cctv.com/2024/05/04/VIDE9xeKNkzUDgejA654milq240504.shtml?spm=C52346.PQw42etIf8YI.Edvk0IT63y7P.3

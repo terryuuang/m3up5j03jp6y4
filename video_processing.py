@@ -103,7 +103,7 @@ def main(url):
     video_date = f"影片日期：{translate_text(video_date)}"
     price = f"此次消耗 {float(length)/60*0.006} 美金"
 
-    video_info = f"{exec_time}\n{title}\n{tag}\n{video_date}"
+    video_info = f"{exec_time}\n\n{title}\n\n{tag}\n\n{video_date}"
     zh_text = translate_text(speech_to_text(temp_filename))
 
     clean_up(temp_filename)
