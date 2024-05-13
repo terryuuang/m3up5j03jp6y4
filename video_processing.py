@@ -48,6 +48,7 @@ def download_and_convert(m3u8_url, output_filename, timeout=180):
     """使用ffmpeg轉換m3u8到mp3，並設定超時時間"""
     command = [
         'ffmpeg',
+        '-http_persistent', '0',  # 禁止HTTP持久連接
         '-i', m3u8_url,
         '-y',  # 強迫覆蓋已有的檔案
         '-vn',  # 不包含視頻
