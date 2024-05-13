@@ -44,21 +44,26 @@ def get_video_info(pid):
     return title, hls_url, tag, video_date, length
 
 
-def download_and_convert(m3u8_url, output_filename):
-    """CCTV獲取的是m3u8檔案，使用ffmpeg轉成mp3"""
+def download_and_convert(m3u8_url, output_filename, timeout=180):
+    """使用ffmpeg轉換m3u8到mp3，並設定超時時間"""
     command = [
         'ffmpeg',
         '-i', m3u8_url,
         '-y',  # 強迫覆蓋已有的檔案
-        '-vn',                 # 不包含視訊
+        '-vn',  # 不包含視頻
         '-acodec', 'libmp3lame',  # MP3 編碼器
-        '-q:a', '0',           # 高質量音頻
-        output_filename        # 輸出檔案名稱
+        '-q:a', '0',  # 高質量音頻
+        output_filename  # 輸出檔案名稱
     ]
     try:
-        subprocess.run(command, check=True)
+        # 設定超時，防止過長時間執行
+        subprocess.run(command, check=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        print("轉換超時，請檢查網絡或來源文件。")
     except subprocess.CalledProcessError as e:
         print(f"FFmpeg 轉換失敗：{e}")
+    except Exception as e:
+        print(f"發生未預料的錯誤：{e}")
 
 
 def clean_up(file_path):
@@ -91,21 +96,27 @@ def translate_text(text, dest='zh-TW'):
 
 
 def main(url):
-    temp_filename = get_temp_filename()
-    pid = get_pid(url)
-    title, hls_url, tag, video_date, length = get_video_info(pid)
-    download_and_convert(hls_url, temp_filename)
-    timestamp = datetime.now().strftime("%Y%m%d%H%M")
-    
-    exec_time = f"#執行時間：{timestamp}"
-    title = f"標題：{translate_text(title)}"
-    tag = f"影片標籤：{translate_text(tag)}"
-    video_date = f"影片日期：{translate_text(video_date)}"
-    price = f"此次消耗 {float(length)/60*0.006} 美金"
+    try:
+        temp_filename = get_temp_filename()
 
-    video_info = f"{exec_time}\n\n{title}\n\n{tag}\n\n{video_date}"
-    zh_text = translate_text(speech_to_text(temp_filename))
+        pid = get_pid(url)
+        title, hls_url, tag, video_date, length = get_video_info(pid)
 
-    clean_up(temp_filename)
+        download_and_convert(hls_url, temp_filename)
 
-    return video_info, price, zh_text
+        if os.path.exists(temp_filename):
+            timestamp = datetime.now().strftime("%Y%m%d%H%M")
+            exec_time = f"#執行時間：{timestamp}"
+            title = f"標題：{translate_text(title)}"
+            tag = f"影片標籤：{translate_text(tag)}"
+            video_date = f"影片日期：{translate_text(video_date)}"
+            price = f"此次消耗 {float(length)/60*0.006} 美金"
+            video_info = f"{exec_time}\n\n{title}\n\n{tag}\n\n{video_date}"
+            zh_text = translate_text(speech_to_text(temp_filename))
+            clean_up(temp_filename)
+            return video_info, price, zh_text
+        else:
+            raise FileNotFoundError("The video file could not be downloaded or converted.")
+    except Exception as e:
+        clean_up(temp_filename)
+        return str(e), "Error occurred", "Error details unavailable"
