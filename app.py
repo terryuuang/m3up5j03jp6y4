@@ -58,11 +58,11 @@ with st.sidebar:
         if st.button("確認"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
-            st.experimental_rerun()
+            st.rerun()
 
         if st.button("取消"):
             del st.session_state.confirmation_flag
-            st.experimental_rerun()
+            st.rerun()
 
 
 # 按下執行按鈕

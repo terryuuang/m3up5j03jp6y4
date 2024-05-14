@@ -5,6 +5,7 @@ import subprocess
 from datetime import datetime
 
 import requests
+import streamlit as st
 from dotenv import load_dotenv
 from py_trans import PyTranslator
 from openai import OpenAI
@@ -48,23 +49,22 @@ def download_and_convert(m3u8_url, output_filename, timeout=180):
     """使用ffmpeg轉換m3u8到mp3，並設定超時時間"""
     command = [
         'ffmpeg',
-        '-http_persistent', '0',  # 禁止HTTP持久連接
         '-i', m3u8_url,
         '-y',  # 強迫覆蓋已有的檔案
         '-vn',  # 不包含視頻
         '-acodec', 'libmp3lame',  # MP3 編碼器
-        '-q:a', '0',  # 高質量音頻
+        '-q:a', '5',  # 音質選擇0~9，越小音質越好
         output_filename  # 輸出檔案名稱
     ]
     try:
         # 設定超時，防止過長時間執行
         subprocess.run(command, check=True, timeout=timeout)
     except subprocess.TimeoutExpired:
-        print("轉換超時，請檢查網絡或來源文件。")
+        st.error("轉換超時，請檢查網絡或來源文件。")
     except subprocess.CalledProcessError as e:
-        print(f"FFmpeg 轉換失敗：{e}")
+        st.error(f"FFmpeg 轉換失敗：{e}")
     except Exception as e:
-        print(f"發生未預料的錯誤：{e}")
+        st.error(f"發生未預料的錯誤：{e}")
 
 
 def clean_up(file_path):
@@ -103,6 +103,7 @@ def main(url):
         pid = get_pid(url)
         title, hls_url, tag, video_date, length = get_video_info(pid)
 
+        st.info('正在下載影片，請稍候...')
         download_and_convert(hls_url, temp_filename)
 
         if os.path.exists(temp_filename):
@@ -117,7 +118,7 @@ def main(url):
             clean_up(temp_filename)
             return video_info, price, zh_text
         else:
-            raise FileNotFoundError("The video file could not be downloaded or converted.")
+            raise FileNotFoundError("這個影片不存在或無法下載。")
     except Exception as e:
         clean_up(temp_filename)
-        return str(e), "Error occurred", "Error details unavailable"
+        return str(e), "Error occurred", "錯誤發生，請檢查網址是否正確。"
