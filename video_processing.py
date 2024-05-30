@@ -68,8 +68,10 @@ def download_and_convert(m3u8_url, output_filename, timeout=180):
 
 
 def clean_up(file_path):
-    os.remove(file_path)
-
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    else:
+        print(f"檔案找不到，無法刪除 {file_path}")
 
 def speech_to_text(output_filename):
     """使用openai語音轉文字"""
@@ -92,7 +94,7 @@ def translate_text(text, dest='zh-TW'):
     Translate text using Translate.com：translator.translate_com(text, dest)
     """
     translator = PyTranslator()
-    result = translator.google(text, dest)['translation']
+    result = translator.translate_dict(text, dest)['translation']
     return result.replace("台", "臺")
 
 
@@ -103,8 +105,8 @@ def main(url):
         pid = get_pid(url)
         title, hls_url, tag, video_date, length = get_video_info(pid)
 
-        st.info('正在下載影片，請稍候...')
-        download_and_convert(hls_url, temp_filename)
+        with st.spinner("下載影片中..."):
+            download_and_convert(hls_url, temp_filename)
 
         if os.path.exists(temp_filename):
             timestamp = datetime.now().strftime("%Y%m%d%H%M")
@@ -114,11 +116,15 @@ def main(url):
             video_date = f"影片日期：{translate_text(video_date)}"
             price = f"此次消耗 {float(length)/60*0.006} 美金"
             video_info = f"{exec_time}\n\n{title}\n\n{tag}\n\n{video_date}"
-            zh_text = translate_text(speech_to_text(temp_filename))
+            
+            with st.spinner("語音轉文字中..."):
+                text = speech_to_text(temp_filename)
+                
+            zh_text = translate_text(text)
             clean_up(temp_filename)
             return video_info, price, zh_text
         else:
             raise FileNotFoundError("這個影片不存在或無法下載。")
     except Exception as e:
         clean_up(temp_filename)
-        return str(e), "Error occurred", "錯誤發生，請檢查網址是否正確。"
+        return str(e), "錯誤發生，請檢查網址是否正確。"
